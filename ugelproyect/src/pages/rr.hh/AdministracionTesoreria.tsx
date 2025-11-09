@@ -1,0 +1,1122 @@
+import React, { useState, useEffect } from 'react';
+import { Download, Briefcase, Eye, Edit, Trash2, X, FileSpreadsheet, Brain, Sparkles } from 'lucide-react';
+import UgelLogo from '@/imagenes/icons.png'; // Import the UGEL logo with relative path
+import { jsPDF } from 'jspdf'; // Import jsPDF
+import * as XLSX from 'xlsx'; // Import XLSX for Excel generation
+// import { AIService } from '@/services/aiService'; // Import AI service - No longer needed
+
+interface Convocatoria {
+  id: number;
+  area: string;
+  puesto: string;
+  sueldo: string;
+  requisitos: string;
+  experiencia: string;
+  licenciatura: string;
+  habilidades: string;
+  fechaPublicacion: string;
+  fechaFinalizacion: string;
+  estado: string;
+}
+
+const API_URL = 'http://localhost:9000/ugel-talara/convocatorias';
+
+const AdministracionTesoreria: React.FC = () => {
+  const [convocatorias, setConvocatorias] = useState<Convocatoria[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedConvocatoria, setSelectedConvocatoria] = useState<Convocatoria | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [formData, setFormData] = useState({
+    area: 'Administración - Tesorería',
+    puesto: '',
+    sueldo: '',
+    requisitos: '',
+    experiencia: '',
+    licenciatura: 'No',
+    habilidades: '',
+    fechaPublicacion: '',
+    fechaFinalizacion: '',
+    estado: 'activo',
+  });
+  const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
+
+  const fetchConvocatorias = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_URL}/convocatorias?area=${encodeURIComponent('Administración - Tesorería')}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data: Convocatoria[] = await response.json();
+      setConvocatorias(data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch convocatorias');
+      setConvocatorias([]); // Clear convocatorias on error
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConvocatorias();
+  }, []);
+
+  // *** FUNCIONES DE IA INTELIGENTES ***
+  const analyzeWithAI = async () => {
+    try {
+      setIsAnalyzing(true);
+      setShowAiModal(true);
+      // Simular análisis de IA con datos de las convocatorias
+      const analysis = {
+        totalConvocatorias: convocatorias.length,
+        areas: [...new Set(convocatorias.map(c => c.area))],
+        puestos: [...new Set(convocatorias.map(c => c.puesto))],
+        recomendaciones: [
+          'Revisar requisitos de experiencia para optimizar candidatos',
+          'Considerar habilidades técnicas específicas del área',
+          'Evaluar criterios de selección para mejor matching'
+        ]
+      };
+      setAiAnalysis(analysis);
+    } catch (error) {
+      console.error('Error en análisis de IA:', error);
+      setError('Error al generar análisis con IA');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Función para optimizar convocatorias (no utilizada actualmente)
+  /*
+  const optimizeConvocatoria = async (conv: Convocatoria) => {
+    try {
+      setIsAnalyzing(true);
+      // Simular optimización de requisitos
+      const optimized = {
+        original: conv.requisitos,
+        optimized: `${conv.requisitos}\n\nOptimizaciones sugeridas:\n- Especificar años de experiencia requeridos\n- Detallar habilidades técnicas específicas\n- Incluir competencias blandas necesarias`,
+        area: conv.area,
+        mejoras: [
+          'Agregar criterios de evaluación específicos',
+          'Definir competencias técnicas requeridas',
+          'Incluir habilidades de liderazgo si aplica'
+        ]
+      };
+      setAiAnalysis(optimized);
+      setShowAiModal(true);
+    } catch (error) {
+      console.error('Error al optimizar:', error);
+      setError('Error al optimizar con IA');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+  */
+
+  const generateJobDescription = async () => {
+    try {
+      setIsAnalyzing(true);
+      // Simular generación de descripción de trabajo
+      const description = {
+        titulo: 'Administración - Tesorería',
+        puesto: 'Nuevo Puesto',
+        descripcion: `Descripción del puesto generada por IA:
+        
+        Responsabilidades:
+        - Gestión de recursos financieros
+        - Control de presupuestos
+        - Elaboración de reportes financieros
+        - Coordinación con áreas administrativas
+        
+        Requisitos:
+        - Formación en administración o contabilidad
+        - Experiencia en gestión financiera
+        - Conocimientos en sistemas contables
+        - Habilidades analíticas y de comunicación`,
+        competencias: [
+          'Gestión financiera',
+          'Análisis de datos',
+          'Trabajo en equipo',
+          'Comunicación efectiva'
+        ]
+      };
+      setAiAnalysis(description);
+      setShowAiModal(true);
+    } catch (error) {
+      console.error('Error al generar descripción:', error);
+      setError('Error al generar descripción con IA');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // *** FUNCIÓN downloadExcel MEJORADA PARA GENERAR TABLA PROFESIONAL Y BONITA ***
+  const downloadExcel = async () => {
+    try {
+      // Crear un nuevo libro de trabajo
+      const workbook = XLSX.utils.book_new();
+
+      // === HOJA PRINCIPAL: CONVOCATORIAS ===
+      // Preparar los datos para Excel
+      const excelData = convocatorias.map((conv, index) => ({
+        'N°': index + 1,
+        'Área': conv.area,
+        'Puesto': conv.puesto,
+        'Fecha Inicio': new Date(conv.fechaPublicacion).toLocaleDateString('es-ES'),
+        'Fecha Fin': new Date(conv.fechaFinalizacion).toLocaleDateString('es-ES'),
+        'Sueldo': conv.sueldo,
+        'Experiencia': conv.experiencia,
+        'Licenciatura': conv.licenciatura,
+        'Estado': conv.estado === 'activo' ? 'Activo' : 'Deshabilitado',
+        'Requisitos': conv.requisitos,
+        'Habilidades': conv.habilidades
+      }));
+
+      // Crear hoja de trabajo con datos
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // === DISEÑO BONITO: ENCABEZADO PRINCIPAL ===
+      // Agregar título principal en la fila 1
+      worksheet['A1'] = { v: 'SISTEMA DE CONVOCATORIAS LABORALES - UGEL TALARA', t: 's' };
+      worksheet['A1'].s = {
+        font: { bold: true, size: 18, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "1E40AF" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thick", color: { rgb: "000000" } },
+          bottom: { style: "thick", color: { rgb: "000000" } },
+          left: { style: "thick", color: { rgb: "000000" } },
+          right: { style: "thick", color: { rgb: "000000" } }
+        }
+      };
+
+      // Información adicional en fila 2
+      worksheet['A2'] = { v: `Reporte generado el: ${new Date().toLocaleDateString('es-ES')} | Área: Administración - Tesorería | Total: ${convocatorias.length} convocatorias`, t: 's' };
+      worksheet['A2'].s = {
+        font: { bold: true, size: 12, color: { rgb: "1E40AF" } },
+        fill: { fgColor: { rgb: "E0F2FE" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thin", color: { rgb: "1E40AF" } },
+          bottom: { style: "thin", color: { rgb: "1E40AF" } },
+          left: { style: "thin", color: { rgb: "1E40AF" } },
+          right: { style: "thin", color: { rgb: "1E40AF" } }
+        }
+      };
+
+      // Fila vacía para separación
+      worksheet['A3'] = { v: '', t: 's' };
+
+      // Mover datos a partir de la fila 4
+      const newData = [];
+      for (let i = 0; i < excelData.length; i++) {
+        newData.push(excelData[i]);
+      }
+
+      // Crear nueva hoja con datos desplazados
+      const newWorksheet = XLSX.utils.json_to_sheet(newData);
+      
+      // Copiar estilos y datos
+      Object.keys(worksheet).forEach(key => {
+        if (key.startsWith('A') || key.startsWith('B') || key.startsWith('C') || key.startsWith('D') || key.startsWith('E') || key.startsWith('F') || key.startsWith('G') || key.startsWith('H') || key.startsWith('I') || key.startsWith('J') || key.startsWith('K') || key.startsWith('L')) {
+          newWorksheet[key] = worksheet[key];
+        }
+      });
+
+      // Agregar encabezado principal
+      newWorksheet['A1'] = { v: 'SISTEMA DE CONVOCATORIAS LABORALES - UGEL TALARA', t: 's' };
+      newWorksheet['A1'].s = {
+        font: { bold: true, size: 18, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "1E40AF" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thick", color: { rgb: "000000" } },
+          bottom: { style: "thick", color: { rgb: "000000" } },
+          left: { style: "thick", color: { rgb: "000000" } },
+          right: { style: "thick", color: { rgb: "000000" } }
+        }
+      };
+
+      newWorksheet['A2'] = { v: `Reporte generado el: ${new Date().toLocaleDateString('es-ES')} | Área: Administración - Tesorería | Total: ${convocatorias.length} convocatorias`, t: 's' };
+      newWorksheet['A2'].s = {
+        font: { bold: true, size: 12, color: { rgb: "1E40AF" } },
+        fill: { fgColor: { rgb: "E0F2FE" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thin", color: { rgb: "1E40AF" } },
+          bottom: { style: "thin", color: { rgb: "1E40AF" } },
+          left: { style: "thin", color: { rgb: "1E40AF" } },
+          right: { style: "thin", color: { rgb: "1E40AF" } }
+        }
+      };
+
+      // Actualizar rango
+      const newRange = XLSX.utils.decode_range(newWorksheet['!ref'] || 'A1');
+      const newLastRow = newRange.e.r;
+      const newLastCol = newRange.e.c;
+
+      // === CONFIGURACIÓN DE COLUMNAS BONITAS ===
+      newWorksheet['!cols'] = [
+        { wch: 8 },   // N°
+        { wch: 35 },  // Área
+        { wch: 45 },  // Puesto
+        { wch: 18 },  // Fecha Inicio
+        { wch: 18 },  // Fecha Fin
+        { wch: 25 },  // Sueldo
+        { wch: 25 },  // Experiencia
+        { wch: 18 },  // Licenciatura
+        { wch: 18 },  // Estado
+        { wch: 70 },  // Requisitos
+        { wch: 70 }   // Habilidades
+      ];
+
+      // === ESTILOS BONITOS PARA ENCABEZADOS ===
+      const headerStyle = {
+        font: { bold: true, color: { rgb: "FFFFFF" }, size: 13 },
+        fill: { fgColor: { rgb: "7C3AED" } }, // Púrpura elegante
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "medium", color: { rgb: "4C1D95" } },
+          bottom: { style: "medium", color: { rgb: "4C1D95" } },
+          left: { style: "thin", color: { rgb: "FFFFFF" } },
+          right: { style: "thin", color: { rgb: "FFFFFF" } }
+        }
+      };
+
+      // === ESTILOS BONITOS PARA DATOS ===
+      const dataStyle = {
+        alignment: { vertical: "top", horizontal: "left" },
+        border: {
+          top: { style: "thin", color: { rgb: "E5E7EB" } },
+          bottom: { style: "thin", color: { rgb: "E5E7EB" } },
+          left: { style: "thin", color: { rgb: "E5E7EB" } },
+          right: { style: "thin", color: { rgb: "E5E7EB" } }
+        },
+        font: { size: 11 }
+      };
+
+      // Aplicar estilos a encabezados (fila 4)
+      for (let col = 0; col <= newLastCol; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 3, c: col });
+        if (!newWorksheet[cellAddress]) newWorksheet[cellAddress] = { v: "" };
+        newWorksheet[cellAddress].s = headerStyle;
+      }
+
+      // Aplicar estilos a datos con colores alternados
+      for (let row = 4; row <= newLastRow; row++) {
+        for (let col = 0; col <= newLastCol; col++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+          if (!newWorksheet[cellAddress]) newWorksheet[cellAddress] = { v: "" };
+          
+          // Colores alternados más bonitos
+          const isEvenRow = (row - 4) % 2 === 0;
+          const fillColor = isEvenRow ? "F8FAFC" : "FFFFFF";
+          
+          newWorksheet[cellAddress].s = {
+            ...dataStyle,
+            fill: { fgColor: { rgb: fillColor } }
+          };
+        }
+      }
+
+      // === CONFIGURACIÓN AVANZADA ===
+      newWorksheet['!freeze'] = { xSplit: 0, ySplit: 4 }; // Congelar encabezados
+      newWorksheet['!autofilter'] = { ref: `A4:${XLSX.utils.encode_cell({ r: newLastRow, c: newLastCol })}` };
+
+      // Agregar la hoja principal
+      XLSX.utils.book_append_sheet(workbook, newWorksheet, '📋 Convocatorias');
+
+      // === HOJA DE RESUMEN BONITA ===
+      const summaryData = [
+        ['🏢 SISTEMA DE CONVOCATORIAS LABORALES - UGEL TALARA'],
+        [''],
+        ['📊 INFORMACIÓN GENERAL'],
+        ['📈 Total de Convocatorias', convocatorias.length],
+        ['✅ Convocatorias Activas', convocatorias.filter(c => c.estado === 'activo').length],
+        ['❌ Convocatorias Deshabilitadas', convocatorias.filter(c => c.estado === 'desactivado').length],
+        ['🏢 Área Filtrada', 'Administración - Tesorería'],
+        ['📅 Fecha de Reporte', new Date().toLocaleDateString('es-ES')],
+        [''],
+        ['📈 ESTADÍSTICAS POR ÁREA']
+      ];
+
+      // Agregar estadísticas por área
+      summaryData.push(['📁 Administración - Tesorería', convocatorias.length]);
+
+      const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
+      summaryWorksheet['!cols'] = [
+        { wch: 50 },
+        { wch: 30 }
+      ];
+
+      // === ESTILOS BONITOS PARA RESUMEN ===
+      // Título principal
+      summaryWorksheet['A1'].s = {
+        font: { bold: true, size: 20, color: { rgb: "1E40AF" } },
+        fill: { fgColor: { rgb: "E0F2FE" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thick", color: { rgb: "1E40AF" } },
+          bottom: { style: "thick", color: { rgb: "1E40AF" } },
+          left: { style: "thick", color: { rgb: "1E40AF" } },
+          right: { style: "thick", color: { rgb: "1E40AF" } }
+        }
+      };
+
+      // Sección de información general
+      summaryWorksheet['A3'].s = {
+        font: { bold: true, size: 16, color: { rgb: "059669" } },
+        fill: { fgColor: { rgb: "ECFDF5" } },
+        alignment: { horizontal: "left", vertical: "center" }
+      };
+
+      // Sección de estadísticas
+      summaryWorksheet['A9'].s = {
+        font: { bold: true, size: 16, color: { rgb: "7C3AED" } },
+        fill: { fgColor: { rgb: "F3E8FF" } },
+        alignment: { horizontal: "left", vertical: "center" }
+      };
+
+      // Estilos para datos del resumen
+      for (let row = 4; row <= 7; row++) {
+        summaryWorksheet[`A${row}`].s = {
+          font: { size: 12, color: { rgb: "374151" } },
+          alignment: { horizontal: "left", vertical: "center" }
+        };
+        summaryWorksheet[`B${row}`].s = {
+          font: { bold: true, size: 12, color: { rgb: "1E40AF" } },
+          alignment: { horizontal: "center", vertical: "center" }
+        };
+      }
+
+      XLSX.utils.book_append_sheet(workbook, summaryWorksheet, '📊 Resumen');
+
+      // === GENERAR ARCHIVO ===
+      const fileName = `UGEL_Talara_Convocatorias_Administracion_Tesoreria_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+
+      console.log('✅ Archivo Excel generado exitosamente con diseño bonito:', fileName);
+    } catch (error) {
+      console.error('❌ Error al generar Excel:', error);
+      setError('Error al generar el archivo Excel');
+    }
+  };
+
+  const downloadPDF = async () => {
+    try {
+      const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation for better table fit
+
+      // Modern blue gradient header background
+      doc.setFillColor(37, 99, 235); // Blue-600
+      doc.rect(0, 0, 297, 50, 'F');
+      
+      // Decorative accent bar
+      doc.setFillColor(59, 130, 246); // Blue-500
+      doc.rect(0, 50, 297, 3, 'F');
+
+      // Add the UGEL logo with white circular background
+      doc.setFillColor(255, 255, 255);
+      doc.circle(28, 22, 16, 'F');
+      doc.addImage(UgelLogo, 'JPEG', 14, 8, 28, 28);
+      
+      // Title and subtitle with shadow effect
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(24);
+      doc.text('REPORTE DE CONVOCATORIAS', 148, 20, { align: 'center' });
+      
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "normal");
+      doc.text('UGEL Talara', 148, 30, { align: 'center' });
+      
+      // Info boxes with modern design
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      
+      const infoY = 42;
+      const boxWidth = 85;
+      
+      // Area box
+      doc.setFillColor(255, 255, 255, 0.15); // Semi-transparent white fill
+      doc.roundedRect(12, infoY - 6, boxWidth, 9, 2, 2, 'F');
+      doc.text(`📋 Área: ${"Administración - Tesorería"}`, 16, infoY);
+      
+      // Date box
+      doc.roundedRect(106, infoY - 6, boxWidth, 9, 2, 2, 'F');
+      doc.text(`📅 Fecha: ${new Date().toLocaleDateString('es-ES')}`, 110, infoY);
+      
+      // Total box
+      doc.roundedRect(200, infoY - 6, boxWidth, 9, 2, 2, 'F');
+      doc.text(`📊 Total: ${convocatorias.length} Convocatorias`, 204, infoY);
+
+      console.log("Convocatorias filtradas for PDF:", convocatorias.length);
+
+      // Manually draw table headers and rows
+      const tableStartY = infoY + 15; // Start Y position for the table, adjusted to be below info boxes
+      const cellPadding = 3; // Increased padding for better text visibility
+      const fontSize = 8; // Adjusted font size
+      const headerHeight = 10; // Height of the header row
+      const rowHeight = 10; // Height of each data row
+
+      doc.setFontSize(fontSize);
+
+      // Define column widths - Adjusted for better layout
+      const colWidths: { [key: string]: number } = {
+        'N°': 8,
+        'Área': 25,
+        'Puesto': 30,
+        'Tiempo': 30,
+        'Sueldo': 18,
+        'Experiencia': 18,
+        'Licenciatura': 18,
+        'Estado': 15,
+        'Requisitos': 30,
+        'Habilidades': 30,
+      };
+
+      const headers = Object.keys(colWidths);
+      let currentX = 14;
+      let currentY = tableStartY;
+
+      // Draw table headers
+      doc.setFillColor(236, 72, 153); // Header background color (pink-600)
+      doc.setTextColor(255, 255, 255); // Header text color (white)
+      doc.setFont("helvetica", "bold");
+
+      headers.forEach(header => {
+        const width = colWidths[header];
+        doc.rect(currentX, currentY, width, headerHeight, 'F'); // Filled rectangle for header background
+        doc.setDrawColor(180, 180, 180); // Lighter gray border for cells
+        doc.rect(currentX, currentY, width, headerHeight, 'S'); // Draw border
+        doc.text(header, currentX + width / 2, currentY + headerHeight / 2 + fontSize / 2 - 0.5, { align: 'center' }); // Center text, fine-tuned vertical alignment
+        currentX += width;
+      });
+
+      currentY += headerHeight;
+      doc.setFont("helvetica", "normal");
+
+      // Draw table body
+      convocatorias.forEach((conv, index) => {
+        currentX = 14; // Reset X for each row
+        const isAlternateRow = index % 2 !== 0;
+        doc.setFillColor(isAlternateRow ? 240 : 255, isAlternateRow ? 240 : 255, isAlternateRow ? 240 : 255); // Alternate row background (light gray/white)
+        doc.setTextColor(0, 0, 0); // Black text for body
+
+        const formattedFechaPublicacion = new Date(conv.fechaPublicacion).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const formattedFechaFinalizacion = new Date(conv.fechaFinalizacion).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+        const rowData = [
+          String(index + 1),
+          conv.area,
+          conv.puesto,
+          `${formattedFechaPublicacion} - ${formattedFechaFinalizacion}`,
+          conv.sueldo,
+          conv.experiencia,
+          conv.licenciatura,
+          (conv.estado === 'activo' ? 'Activo' : 'Deshabilitado'),
+          conv.requisitos,
+          conv.habilidades,
+        ];
+
+        console.log("Row Data for PDF:", rowData); // Log row data for debugging
+
+        headers.forEach((header, colIndex) => {
+          const width = colWidths[header];
+          doc.rect(currentX, currentY, width, rowHeight, 'F'); // Filled rectangle for row background
+          doc.setDrawColor(200, 200, 200); // Light gray border for cells
+          doc.rect(currentX, currentY, width, rowHeight, 'S'); // Draw border
+
+          let cellText = String(rowData[colIndex]);
+          const textLines = doc.splitTextToSize(cellText, width - cellPadding * 2);
+          doc.text(textLines[0] || '', currentX + cellPadding, currentY + rowHeight / 2 + fontSize / 2 - 0.5); // Left-align text, fine-tuned vertical alignment
+          currentX += width;
+        });
+        currentY += rowHeight;
+      });
+
+      doc.save(`UGEL_Talar-Convocatorias_${"Administración - Tesorería"}_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      setError('Error al generar el PDF');
+    }
+  };
+
+  const handleViewDetails = (convocatoria: Convocatoria) => {
+    setSelectedConvocatoria(convocatoria);
+    setIsModalOpen(true);
+  };
+
+  const handleEditConvocatoria = (conv: Convocatoria) => {
+    setSelectedConvocatoria(conv);
+    setFormData({
+      area: conv.area,
+      puesto: conv.puesto,
+      sueldo: conv.sueldo,
+      requisitos: conv.requisitos,
+      experiencia: conv.experiencia,
+      licenciatura: conv.licenciatura,
+      habilidades: conv.habilidades,
+      fechaPublicacion: conv.fechaPublicacion,
+      fechaFinalizacion: conv.fechaFinalizacion,
+      estado: conv.estado,
+    });
+    setShowEditForm(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedConvocatoria(null);
+  };
+
+  const closeCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setShowEditForm(false);
+    setSelectedConvocatoria(null);
+    setFormData({
+      area: 'Administración - Tesorería',
+      puesto: '',
+      sueldo: '',
+      requisitos: '',
+      experiencia: '',
+      licenciatura: 'No',
+      habilidades: '',
+      fechaPublicacion: '',
+      fechaFinalizacion: '',
+      estado: 'activo',
+    });
+    setFormErrors([]);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent, type: 'create' | 'edit') => {
+    e.preventDefault();
+    setSubmissionError(null);
+    const errors: string[] = [];
+
+    const requiredFields = ['puesto', 'sueldo', 'requisitos', 'experiencia', 'licenciatura', 'habilidades', 'fechaPublicacion', 'fechaFinalizacion', 'estado'];
+
+    requiredFields.forEach(field => {
+      if (!formData[field as keyof typeof formData]) {
+        errors.push(field);
+      }
+    });
+
+    if (errors.length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    setFormErrors([]);
+
+    const payload = {
+      ...formData,
+      area: 'Administración - Tesorería', // Hardcode area for this specific component
+      fechaPublicacion: formData.fechaPublicacion ? new Date(formData.fechaPublicacion).toISOString() : '',
+      fechaFinalizacion: formData.fechaFinalizacion ? new Date(formData.fechaFinalizacion).toISOString() : '',
+      ...(type === 'edit' && { id: selectedConvocatoria!.id }),
+    };
+
+    try {
+      const url = type === 'create' ? `${API_URL}/convocatorias` : `${API_URL}/convocatorias/${selectedConvocatoria!.id}`;
+      const method = type === 'create' ? 'POST' : 'PUT';
+      console.log(`Sending ${method} request to ${url} with payload:`, payload);
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: `El servidor respondió con un error ${response.status}. Verifique los datos.` }));
+        console.error("Backend Error Details:", JSON.stringify(errorData, null, 2));
+        throw new Error(errorData.message || `Error en la operación (Estado: ${response.status})`);
+      }
+
+      fetchConvocatorias();
+      closeCreateModal();
+    } catch (err: any) {
+      setSubmissionError(err.message);
+      console.error('Error submitting form:', err);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedConvocatoria) return;
+    try {
+      const response = await fetch(`${API_URL}/convocatorias/${selectedConvocatoria.id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Error al eliminar');
+      await fetchConvocatorias();
+      setShowDelete(false);
+      setSelectedConvocatoria(null);
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error deleting convocatoria:', err);
+    }
+  };
+
+  return (
+    <div className="min-h-screen w-full bg-[#020617] relative p-8">
+      {error && <div className="mb-4 text-red-500">Error: {error}</div>}
+      {submissionError && <div className="mb-4 text-red-500">Error de envío: {submissionError}</div>}
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-white mb-2">Administración - Tesorería</h1>
+        <p className="text-lg text-slate-400">Gestión de Convocatorias</p>
+      </div>
+
+      <div className="flex gap-3 mb-8 flex-wrap">
+        <button
+          onClick={downloadExcel}
+          className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 rounded-xl hover:from-blue-500 hover:to-blue-400 transition-all shadow-lg shadow-blue-500/50 hover:shadow-blue-400/50 hover:scale-105"
+        >
+          <FileSpreadsheet size={20} className="group-hover:rotate-12 transition-transform" />
+          Exportar Excel
+        </button>
+        <button
+          onClick={downloadPDF}
+          className="group flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-xl hover:from-green-500 hover:to-green-400 transition-all shadow-lg shadow-green-500/50 hover:shadow-green-400/50 hover:scale-105"
+        >
+          <Download size={20} className="group-hover:translate-y-1 transition-transform" />
+          Descargar PDF
+        </button>
+        <button
+          onClick={analyzeWithAI}
+          disabled={isAnalyzing}
+          className="group flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white px-6 py-3 rounded-xl hover:from-purple-500 hover:to-purple-400 transition-all shadow-lg shadow-purple-500/50 hover:shadow-purple-400/50 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Brain size={20} className="group-hover:scale-110 transition-transform" />
+          {isAnalyzing ? 'Analizando...' : 'Análisis IA'}
+        </button>
+        <button
+          onClick={generateJobDescription}
+          disabled={isAnalyzing}
+          className="group flex items-center gap-2 bg-gradient-to-r from-orange-600 to-orange-500 text-white px-6 py-3 rounded-xl hover:from-orange-500 hover:to-orange-400 transition-all shadow-lg shadow-orange-500/50 hover:shadow-orange-400/50 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Sparkles size={20} className="group-hover:rotate-12 transition-transform" />
+          {isAnalyzing ? 'Generando...' : 'IA Assistant'}
+        </button>
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="group flex items-center gap-2 bg-gradient-to-r from-pink-600 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-pink-500 hover:to-pink-400 transition-all shadow-lg shadow-pink-500/50 hover:shadow-pink-400/50 hover:scale-105"
+        >
+          <Briefcase size={20} className="group-hover:scale-110 transition-transform" />
+          Nueva Convocatoria
+        </button>
+      </div>
+
+      <div className="bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-slate-700/50 animate-fade-in">
+        <h3 className="text-xl font-bold p-6 text-white bg-gradient-to-r from-pink-600/20 to-purple-600/20 border-b border-slate-700/50">
+          Convocatorias de Administración - Tesorería
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gradient-to-r from-pink-600 to-purple-600">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-white">N°</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-white">Área</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-white">Puesto</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-white">Tiempo</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-white">Sueldo</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-white">Experiencia</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-white">Licenciatura</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-white">Estado</th>
+                <th className="px-6 py-4 text-center text-sm font-semibold text-white">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={10} className="px-6 py-12 text-center text-slate-400">
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-5 h-5 rounded-full animate-pulse bg-pink-500"></div>
+                      <div className="w-5 h-5 rounded-full animate-pulse bg-purple-500" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-5 h-5 rounded-full animate-pulse bg-blue-500" style={{ animationDelay: '0.4s' }}></div>
+                    </div>
+                  </td>
+                </tr>
+              ) : convocatorias.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="px-6 py-12 text-center text-slate-400">
+                    <Briefcase size={48} className="mx-auto text-slate-600 mb-4" />
+                    No hay convocatorias disponibles para esta área
+                  </td>
+                </tr>
+              ) : (
+                convocatorias.map((conv, index) => (
+                  <tr
+                    key={conv.id}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                    className="border-b border-slate-700/50 hover:bg-pink-500/5 transition-all duration-300 animate-slide-in"
+                  >
+                    <td className="px-6 py-4 text-sm font-semibold text-slate-300">{index + 1}</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">{conv.area}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-pink-400">{conv.puesto}</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">{`${new Date(conv.fechaPublicacion).toLocaleDateString('es-ES')} - ${new Date(conv.fechaFinalizacion).toLocaleDateString('es-ES')}`}</td>
+                    <td className="px-6 py-4 text-sm text-green-400 font-semibold">{conv.sueldo}</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">{conv.experiencia}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          conv.licenciatura === 'Sí'
+                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                            : 'bg-slate-700/50 text-slate-400 border border-slate-600/30'
+                        }`}
+                      >
+                        {conv.licenciatura}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          conv.estado === 'activo' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                        }`}
+                      >
+                        {conv.estado === 'activo' ? 'Activo' : 'Deshabilitado'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center flex gap-2 justify-center">
+                      <button
+                        onClick={() => handleViewDetails(conv)}
+                        className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-4 py-2 rounded-lg hover:from-blue-500 hover:to-blue-400 transition-all text-sm font-semibold shadow-lg hover:scale-105"
+                      >
+                        <Eye size={16} className="group-hover:scale-110 transition-transform" />
+                        Ver
+                      </button>
+                      <button
+                        onClick={() => handleEditConvocatoria(conv)}
+                        className="bg-gradient-to-r from-yellow-600 to-yellow-500 text-white px-4 py-2 rounded-lg hover:from-yellow-500 hover:to-yellow-400 transition-all text-sm font-semibold shadow-lg hover:scale-105"
+                      >
+                        <Edit size={16} className="group-hover:scale-110 transition-transform" />
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => { setSelectedConvocatoria(conv); setShowDelete(true); }}
+                        className="bg-gradient-to-r from-red-600 to-red-500 text-white px-4 py-2 rounded-lg hover:from-red-500 hover:to-red-400 transition-all text-sm font-semibold shadow-lg hover:scale-105"
+                      >
+                        <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {isModalOpen && selectedConvocatoria && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full border border-slate-700/50 animate-slide-up">
+            <div className="bg-gradient-to-r from-pink-600 to-purple-600 px-6 py-4 flex justify-between items-center rounded-t-2xl">
+              <h3 className="text-xl font-bold text-white">Detalles de la Convocatoria</h3>
+              <button
+                onClick={closeModal}
+                className="hover:bg-white/20 rounded-full p-2 transition-colors"
+              >
+                <X size={24} className="text-white" />
+              </button>
+            </div>
+            <div className="p-8 space-y-6 text-slate-300">
+              <p><strong>Área:</strong> {selectedConvocatoria.area}</p>
+              <p><strong>Puesto:</strong> {selectedConvocatoria.puesto}</p>
+              <p><strong>Sueldo:</strong> {selectedConvocatoria.sueldo}</p>
+              <p><strong>Experiencia:</strong> {selectedConvocatoria.experiencia}</p>
+              <p><strong>Licenciatura:</strong> {selectedConvocatoria.licenciatura}</p>
+              <p><strong>Requisitos:</strong> {selectedConvocatoria.requisitos}</p>
+              <p><strong>Habilidades:</strong> {selectedConvocatoria.habilidades}</p>
+              <p>
+                <strong className="text-purple-500">Fecha de Publicación:</strong>{' '}
+                <span className="text-purple-500">
+                  {new Date(selectedConvocatoria.fechaPublicacion).toLocaleDateString('es-ES')}
+                </span>
+              </p>
+              <p>
+                <strong className="text-purple-500">Fecha de Finalización:</strong>{' '}
+                <span className="text-purple-500">
+                  {new Date(selectedConvocatoria.fechaFinalizacion).toLocaleDateString('es-ES')}
+                </span>
+              </p>
+              <p>
+                <strong className="text-purple-500">Estado:</strong>{' '}
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          selectedConvocatoria.estado === 'activo' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                        }`}>
+                  {selectedConvocatoria.estado === 'activo' ? 'Activo' : 'Deshabilitado'}
+                </span>
+              </p>
+            </div>
+            <div className="mt-6 p-6 bg-slate-800/50 border-t border-slate-700/50 flex justify-end">
+              <button
+                onClick={closeModal}
+                className="bg-gradient-to-r from-pink-600 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-pink-500 hover:to-purple-500 transition-all font-semibold shadow-lg hover:scale-105"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(isCreateModalOpen || showEditForm) && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full border border-slate-700/50 animate-slide-up">
+            <div className="bg-gradient-to-r from-pink-600 to-purple-600 px-6 py-4 flex justify-between items-center rounded-t-2xl">
+              <h3 className="text-xl font-bold text-white">{isCreateModalOpen ? 'Publicar Nueva Convocatoria' : 'Editar Convocatoria'}</h3>
+              <button
+                onClick={closeCreateModal}
+                className="hover:bg-white/20 rounded-full p-2 transition-colors"
+              >
+                <X size={24} className="text-white" />
+              </button>
+            </div>
+            <form onSubmit={(e) => handleSubmit(e, isCreateModalOpen ? 'create' : 'edit')} className="p-8 space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Área</label>
+                <input
+                  type="text"
+                  name="area"
+                  value={formData.area}
+                  readOnly
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent text-white placeholder-slate-500 transition-all disabled:opacity-50"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Puesto</label>
+                <input
+                  type="text"
+                  name="puesto"
+                  value={formData.puesto}
+                  onChange={handleInputChange}
+                  placeholder="Ej: Analista de Sistemas"
+                  className={`w-full px-4 py-3 bg-slate-800/50 border ${formErrors.includes('puesto') ? 'border-red-500' : 'border-slate-600'} rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent text-white placeholder-slate-500 transition-all`}
+                />
+                {formErrors.includes('puesto') && <p className="text-red-500 text-xs mt-1">El puesto es obligatorio</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Sueldo</label>
+                <input
+                  type="text"
+                  name="sueldo"
+                  value={formData.sueldo}
+                  onChange={handleInputChange}
+                  placeholder="Ej: S/ 3,500"
+                  className={`w-full px-4 py-3 bg-slate-800/50 border ${formErrors.includes('sueldo') ? 'border-red-500' : 'border-slate-600'} rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent text-white placeholder-slate-500 transition-all`}
+                />
+                {formErrors.includes('sueldo') && <p className="text-red-500 text-xs mt-1">El sueldo es obligatorio</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Años de Experiencia</label>
+                <input
+                  type="text"
+                  name="experiencia"
+                  value={formData.experiencia}
+                  onChange={handleInputChange}
+                  placeholder="Ej: 3 años"
+                  className={`w-full px-4 py-3 bg-slate-800/50 border ${formErrors.includes('experiencia') ? 'border-red-500' : 'border-slate-600'} rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent text-white placeholder-slate-500 transition-all`}
+                />
+                {formErrors.includes('experiencia') && <p className="text-red-500 text-xs mt-1">La experiencia es obligatoria</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Licenciatura Requerida</label>
+                <select
+                  name="licenciatura"
+                  value={formData.licenciatura}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent text-white transition-all"
+                >
+                  <option value="Sí">Sí</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Fecha Publicación</label>
+                <input
+                  type="date"
+                  name="fechaPublicacion"
+                  value={formData.fechaPublicacion}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 bg-slate-800/50 border ${formErrors.includes('fechaPublicacion') ? 'border-red-500' : 'border-slate-600'} rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent text-white transition-all`}
+                />
+                {formErrors.includes('fechaPublicacion') && <p className="text-red-500 text-xs mt-1">La fecha de publicación es obligatoria</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Fecha Finalización</label>
+                <input
+                  type="date"
+                  name="fechaFinalizacion"
+                  value={formData.fechaFinalizacion}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 bg-slate-800/50 border ${formErrors.includes('fechaFinalizacion') ? 'border-red-500' : 'border-slate-600'} rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent text-white transition-all`}
+                />
+                {formErrors.includes('fechaFinalizacion') && <p className="text-red-500 text-xs mt-1">La fecha de finalización es obligatoria</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Estado</label>
+                <select
+                  name="estado"
+                  value={formData.estado}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent text-white transition-all"
+                >
+                  <option value="activo">Activo</option>
+                  <option value="desactivado">Deshabilitado</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Requisitos Académicos</label>
+                <textarea
+                  name="requisitos"
+                  value={formData.requisitos}
+                  onChange={handleInputChange}
+                  placeholder="Ej: Título profesional en..."
+                  rows={3}
+                  className={`w-full px-4 py-3 bg-slate-800/50 border ${formErrors.includes('requisitos') ? 'border-red-500' : 'border-slate-600'} rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent text-white placeholder-slate-500 transition-all`}
+                />
+                {formErrors.includes('requisitos') && <p className="text-red-500 text-xs mt-1">Los requisitos son obligatorios</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Habilidades y Conocimientos Técnicos</label>
+                <textarea
+                  name="habilidades"
+                  value={formData.habilidades}
+                  onChange={handleInputChange}
+                  placeholder="Ej: Manejo de Office, SQL, idiomas, etc."
+                  rows={3}
+                  className={`w-full px-4 py-3 bg-slate-800/50 border ${formErrors.includes('habilidades') ? 'border-red-500' : 'border-slate-600'} rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent text-white placeholder-slate-500 transition-all`}
+                />
+                {formErrors.includes('habilidades') && <p className="text-red-500 text-xs mt-1">Las habilidades son obligatorias</p>}
+              </div>
+              {submissionError && <div className="p-3 bg-red-900/50 text-red-300 rounded-lg text-sm">{submissionError}</div>}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-xl hover:from-green-500 hover:to-green-400 transition-all font-semibold shadow-lg hover:scale-105"
+                >
+                  {isCreateModalOpen ? 'Publicar Convocatoria' : 'Actualizar Convocatoria'}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeCreateModal}
+                  className="px-6 py-3 bg-slate-700 text-slate-300 rounded-xl hover:bg-slate-600 transition-all"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showDelete && selectedConvocatoria && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full border border-slate-700/50 animate-slide-up">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-white">Eliminar Convocatoria</h3>
+              <p className="text-sm text-slate-400 mt-2">¿Estás seguro que deseas eliminar la convocatoria para el puesto de <span className="font-semibold text-pink-400">{selectedConvocatoria.puesto}</span> en el área de <span className="font-semibold text-purple-400">{selectedConvocatoria.area}</span>? Esta acción no se puede deshacer.</p>
+            </div>
+            <div className="p-6 flex justify-end gap-4">
+              <button
+                onClick={() => setShowDelete(false)}
+                className="px-6 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 text-slate-300"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-6 py-2 bg-red-600 rounded-lg hover:bg-red-700 text-white"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Análisis de IA */}
+      {showAiModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-slate-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-slate-700/50 animate-slide-up">
+            <div className="bg-gradient-to-r from-purple-600 to-purple-500 px-6 py-4 flex justify-between items-center rounded-t-2xl">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Brain className="text-white" />
+                Análisis Inteligente con IA
+              </h3>
+              <button
+                onClick={() => setShowAiModal(false)}
+                className="hover:bg-white/20 rounded-full p-2 transition-colors"
+              >
+                <X size={24} className="text-white" />
+              </button>
+            </div>
+            <div className="p-8">
+              {isAnalyzing ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center animate-pulse">
+                      <Brain className="text-white" size={24} />
+                    </div>
+                    <p className="text-slate-300 text-lg">Analizando con IA...</p>
+                    <div className="flex space-x-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 p-6 rounded-xl border border-purple-500/20">
+                    <h4 className="text-lg font-semibold text-purple-300 mb-4 flex items-center gap-2">
+                      <Sparkles className="text-purple-400" />
+                      Análisis Generado por IA
+                    </h4>
+                    <div className="prose prose-invert max-w-none">
+                      <div className="text-slate-200 leading-relaxed whitespace-pre-wrap">
+                        {aiAnalysis}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={() => setShowAiModal(false)}
+                      className="flex-1 bg-gradient-to-r from-purple-600 to-purple-500 text-white px-6 py-3 rounded-xl hover:from-purple-500 hover:to-purple-400 transition-all font-semibold shadow-lg hover:scale-105"
+                    >
+                      Cerrar
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(aiAnalysis);
+                        alert('Análisis copiado al portapapeles');
+                      }}
+                      className="px-6 py-3 bg-slate-700 text-slate-300 rounded-xl hover:bg-slate-600 transition-all"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdministracionTesoreria;

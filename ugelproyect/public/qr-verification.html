@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificado de Registro</title>
+
+    <style>
+        /* Usamos una fuente más limpia y moderna */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400&display=swap');
+
+        body {
+            font-family: 'Poppins', Arial, sans-serif;
+            
+            /* Esto centra la tarjeta verticalmente */
+            display: flex;
+            align-items: center; 
+            
+            /* Esto centra la tarjeta horizontalmente */
+            justify-content: center; 
+            
+            /* Hacemos que ocupe toda la altura de la pantalla */
+            height: 100vh;
+            margin: 0;
+
+            /* Un fondo gris suave para que la tarjeta resalte */
+            background-color: #f0f2f5;
+        }
+
+        /* Esta es la "tarjeta" que contiene el QR */
+        .qr-card {
+            background-color: #ffffff; /* Fondo blanco */
+            padding: 30px; /* Espacio interior */
+            
+            /* Bordes redondeados */
+            border-radius: 15px; 
+            
+            /* Sombra suave para un efecto "flotante" (esto lo hace "bonito") */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            
+            /* Centra todo el contenido (título y QR) */
+            text-align: center; 
+            
+            /* Borde sutil */
+            border: 1px solid #e0e0e0;
+        }
+
+        /* Estilo para el título */
+        .qr-card h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #333;
+            font-weight: 400;
+        }
+
+        /* El contenedor del QR, para darle un borde */
+        #qrcode {
+            padding: 10px; /* Espacio entre el borde y el QR */
+            border: 1px solid #f0f0f0;
+            border-radius: 8px; /* Bordes redondeados para el QR */
+            display: inline-block; /* Ajusta el tamaño al QR */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="qr-card">
+        <h2>Código de Verificación [cite: 31]</h2>
+        
+        <div id="qrcode"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script>
+        // La URL que vamos a codificar, tomada del documento 
+        var urlParaQR = "https://ugeltalara.edu.pe/convocatorias/publicada";
+
+        // Creamos el código QR
+        new QRCode(document.getElementById("qrcode"), {
+            text: urlParaQR,
+            width: 220,  // Un tamaño un poco más grande
+            height: 220,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H // Alta corrección de errores
+        });
+    </script>
+
+</body>
+</html>

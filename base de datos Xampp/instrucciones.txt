@@ -1,0 +1,234 @@
+═══════════════════════════════════════════════════════════════
+  INSTRUCCIONES PARA IMPORTAR BASE DE DATOS EN XAMPP
+  Sistema UGEL Talara - MySQL
+═══════════════════════════════════════════════════════════════
+
+📋 PASO 1: INICIAR XAMPP
+───────────────────────────────────────────────────────────────
+1. Abre el Panel de Control de XAMPP
+2. Inicia el servicio "Apache" (si es necesario)
+3. Inicia el servicio "MySQL" (ESENCIAL)
+4. Verifica que MySQL esté corriendo (debe aparecer en verde)
+
+
+📋 PASO 2: ACCEDER A phpMyAdmin
+───────────────────────────────────────────────────────────────
+1. Abre tu navegador web
+2. Ve a: http://localhost/phpmyadmin
+3. O haz clic en "Admin" junto al servicio MySQL en XAMPP
+
+
+📋 PASO 3: CREAR LA BASE DE DATOS
+───────────────────────────────────────────────────────────────
+1. En phpMyAdmin, haz clic en "Nueva" o "New" en el menú lateral
+2. En "Nombre de la base de datos", escribe:
+   └─ ugel_talara
+   (o el nombre que configuraste en tu archivo .env)
+3. Selecciona "utf8mb4_unicode_ci" como intercalación
+4. Haz clic en "Crear" o "Create"
+
+
+📋 PASO 4: CONFIGURAR max_allowed_packet (IMPORTANTE)
+───────────────────────────────────────────────────────────────
+⚠️ ESTO ES NECESARIO para permitir subir archivos grandes (PDFs, etc.)
+
+OPCIÓN A: Configuración Temporal (Solo para esta sesión)
+───────────────────────────────────────────────────────────────
+1. En phpMyAdmin, selecciona la base de datos "ugel_talara"
+2. Ve a la pestaña "SQL"
+3. Copia y pega el siguiente código:
+
+   SET SESSION max_allowed_packet = 524288000; -- 500MB
+   SET GLOBAL max_allowed_packet = 524288000; -- 500MB
+
+4. Haz clic en "Continuar" o "Go"
+5. Verifica con: SHOW VARIABLES LIKE 'max_allowed_packet';
+
+OPCIÓN B: Configuración Permanente (Recomendado)
+───────────────────────────────────────────────────────────────
+1. Cierra XAMPP completamente
+2. Abre el archivo de configuración de MySQL:
+   └─ Ruta: C:\xampp\mysql\bin\my.ini
+   (Si no existe, busca my.cnf o crea my.ini)
+3. Busca la sección [mysqld] o créala si no existe
+4. Agrega esta línea dentro de [mysqld]:
+   └─ max_allowed_packet=524288000
+5. Guarda el archivo
+6. Reinicia MySQL desde el Panel de Control de XAMPP
+
+
+📋 PASO 5: IMPORTAR ARCHIVO SQL (Si tienes uno)
+───────────────────────────────────────────────────────────────
+Si tienes un archivo .sql con la estructura de la base de datos:
+
+1. En phpMyAdmin, selecciona la base de datos "ugel_talara"
+2. Ve a la pestaña "Importar" o "Import"
+3. Haz clic en "Elegir archivo" o "Choose File"
+4. Selecciona tu archivo .sql
+5. Asegúrate de que:
+   └─ Formato: SQL
+   └─ Codificación de caracteres: utf8
+6. Haz clic en "Continuar" o "Go"
+7. Espera a que termine la importación
+
+
+📋 PASO 6: CREACIÓN AUTOMÁTICA DE TABLAS (Método Alternativo)
+───────────────────────────────────────────────────────────────
+⚠️ NOTA: El sistema crea las tablas automáticamente al iniciar
+
+Si NO tienes un archivo SQL, las tablas se crearán automáticamente
+cuando ejecutes el servidor de la API por primera vez.
+
+Para esto:
+1. Asegúrate de tener configurado el archivo .env en la carpeta Api/
+2. Ejecuta el servidor: npm start (desde la carpeta Api/)
+3. Las tablas se crearán automáticamente con la estructura correcta
+
+
+📋 PASO 7: VERIFICAR LA CONFIGURACIÓN
+───────────────────────────────────────────────────────────────
+1. En phpMyAdmin, selecciona la base de datos "ugel_talara"
+2. Ve a la pestaña "Estructura" o "Structure"
+3. Deberías ver las siguientes tablas (después de ejecutar la API):
+   ✓ usuarios
+   ✓ convocatorias
+   ✓ anexos
+   ✓ anexos_completos
+   ✓ anexos_personal_data
+   ✓ anexos_formacion_academica
+   ✓ anexos_experiencia_laboral
+   ✓ anexos_referencias_laborales
+   ✓ anexos_idiomas
+   ✓ anexos_ofimatica
+   ✓ anexos_especializacion
+   ✓ anexos_parientes_ugel
+   ✓ anexos_declarations
+   ✓ curriculum
+   ✓ reportes_ia
+   ✓ verificaciones_qr
+   ✓ postulantes_registrados
+   ✓ grupos_comite
+   ✓ usuarios_grupos_comite
+   ✓ convocatorias_grupos_comite
+
+
+📋 PASO 8: CONFIGURAR VARIABLES DE ENTORNO
+───────────────────────────────────────────────────────────────
+Crea o edita el archivo Api/.env con la siguiente configuración:
+
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=          (déjalo vacío si no tienes contraseña)
+DB_NAME=ugel_talara
+DB_PORT=3306
+
+Si tienes contraseña en MySQL:
+DB_PASSWORD=tu_contraseña_aqui
+
+
+📋 PASO 9: PROBAR LA CONEXIÓN
+───────────────────────────────────────────────────────────────
+1. Inicia el servidor de la API desde la carpeta Api/
+2. Deberías ver en la consola:
+   └─ "✅ Conectado correctamente a MySQL (XAMPP)"
+3. Si hay errores, verifica:
+   └─ Que MySQL esté corriendo en XAMPP
+   └─ Que la base de datos "ugel_talara" exista
+   └─ Que las credenciales en .env sean correctas
+
+
+═══════════════════════════════════════════════════════════════
+  SOLUCIÓN DE PROBLEMAS COMUNES
+═══════════════════════════════════════════════════════════════
+
+❌ Error: "Access denied for user 'root'@'localhost'"
+───────────────────────────────────────────────────────────────
+Solución:
+1. En phpMyAdmin, ve a "Cuentas de usuario" o "User accounts"
+2. Verifica que el usuario "root" tenga permisos
+3. O cambia DB_USER en .env a otro usuario con permisos
+
+❌ Error: "Unknown database 'ugel_talara'"
+───────────────────────────────────────────────────────────────
+Solución:
+1. Crea la base de datos manualmente en phpMyAdmin (Paso 3)
+2. O verifica que el nombre en .env coincida con el creado
+
+❌ Error: "max_allowed_packet too small"
+───────────────────────────────────────────────────────────────
+Solución:
+1. Ejecuta el script fix_max_allowed_packet.sql (Paso 4)
+2. O configura permanentemente en my.ini
+
+❌ Error: "Table doesn't exist"
+───────────────────────────────────────────────────────────────
+Solución:
+1. Las tablas se crean automáticamente al iniciar la API
+2. Ejecuta: npm start desde la carpeta Api/
+3. Espera a que se creen las tablas automáticamente
+
+❌ MySQL no inicia en XAMPP
+───────────────────────────────────────────────────────────────
+Solución:
+1. Verifica que el puerto 3306 no esté en uso
+2. Detén otros servicios MySQL que puedan estar corriendo
+3. Reinicia XAMPP como Administrador
+4. Revisa los logs en: C:\xampp\mysql\data\mysql_error.log
+
+
+═══════════════════════════════════════════════════════════════
+  NOTAS IMPORTANTES
+═══════════════════════════════════════════════════════════════
+
+✓ Las tablas se crean automáticamente cuando ejecutas la API
+✓ No necesitas importar un archivo SQL manualmente (a menos que tengas datos)
+✓ El sistema usa utf8mb4 para soportar emojis y caracteres especiales
+✓ La base de datos debe estar en InnoDB para soportar claves foráneas
+✓ El max_allowed_packet debe ser al menos 500MB para archivos grandes
+
+
+═══════════════════════════════════════════════════════════════
+  ESTRUCTURA DE LA BASE DE DATOS
+═══════════════════════════════════════════════════════════════
+
+Tablas Principales:
+───────────────────────────────────────────────────────────────
+• usuarios              - Usuarios del sistema
+• convocatorias         - Convocatorias laborales
+• anexos                - Anexos base (JSON y PDF)
+• anexos_completos      - Anexos completos (tabla principal)
+• curriculum            - Currículums de postulantes
+• reportes_ia           - Reportes generados por IA
+• verificaciones_qr     - Verificaciones de códigos QR
+• postulantes_registrados - Postulantes registrados
+• grupos_comite         - Grupos de comité
+• usuarios_grupos_comite - Relación usuarios-grupos
+• convocatorias_grupos_comite - Relación convocatorias-grupos
+
+Tablas de Anexos Detallados:
+───────────────────────────────────────────────────────────────
+• anexos_personal_data
+• anexos_formacion_academica
+• anexos_experiencia_laboral
+• anexos_referencias_laborales
+• anexos_idiomas
+• anexos_ofimatica
+• anexos_especializacion
+• anexos_parientes_ugel
+• anexos_declarations
+
+
+═══════════════════════════════════════════════════════════════
+  CONTACTO Y SOPORTE
+═══════════════════════════════════════════════════════════════
+
+Si tienes problemas, verifica:
+1. Que MySQL esté corriendo en XAMPP
+2. Que la base de datos exista
+3. Que las credenciales en .env sean correctas
+4. Que el puerto 3306 no esté bloqueado
+5. Los logs del servidor de la API para más detalles
+
+
+═══════════════════════════════════════════════════════════════
+

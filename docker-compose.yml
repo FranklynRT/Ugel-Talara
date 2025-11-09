@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # API Backend
+  api:
+    build:
+      context: ./Api
+      dockerfile: Dockerfile
+    container_name: ugel-api
+    ports:
+      - "9000:9000"
+    environment:
+      - NODE_ENV=production
+      - PORT=9000
+      # Las variables de entorno se pueden pasar desde un archivo .env
+      # DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, etc.
+    env_file:
+      - ./Api/.env
+    volumes:
+      # Montar uploads para persistencia
+      - ./Api/uploads:/app/uploads
+      # Montar .env si es necesario (alternativa a env_file)
+      # - ./Api/.env:/app/.env:ro
+    networks:
+      - ugel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend
+  frontend:
+    build:
+      context: ./ugelproyect
+      dockerfile: Dockerfile
+    container_name: ugel-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - ugel-network
+    restart: unless-stopped
+    environment:
+      - VITE_API_BASE_URL=http://api:9000/ugel-talara
+
+  # Frontend Development (opcional)
+  frontend-dev:
+    build:
+      context: ./ugelproyect
+      dockerfile: Dockerfile.dev
+    container_name: ugel-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./ugelproyect/src:/app/src
+      - ./ugelproyect/public:/app/public
+      - ./ugelproyect/package.json:/app/package.json
+    environment:
+      - VITE_API_BASE_URL=http://localhost:9000/ugel-talara
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - ugel-network
+    restart: unless-stopped
+    profiles:
+      - dev
+
+networks:
+  ugel-network:
+    driver: bridge
+
