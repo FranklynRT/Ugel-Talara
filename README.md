@@ -33,10 +33,6 @@ Este sistema web ha sido desarrollado para automatizar y optimizar el proceso de
 - `/server`: Lógica del servidor, API REST y conexión a base de datos (Node.js).
 - `/docs`: Documentación técnica y manuales de usuario.
 
-## 👥 Autores
-
-- **Franklyn Jaren Ramirez Tinedo**
-- **Franklin Edin Ramirez Loyaga**
 
 *Proyecto de innovación para optar al título de Técnico Profesional en Ingeniería de Software con Inteligencia Artificial - **SENATI 2025**.*
 
